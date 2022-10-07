@@ -23,9 +23,9 @@ if NOT "%BUILD_ENVIRONMENT%"=="" (
 
 pushd .
 if "%VC_VERSION%" == "" (
-    call "C:\Program Files (x86)\Microsoft Visual Studio\%VC_YEAR%\%VC_PRODUCT%\VC\Auxiliary\Build\vcvarsall.bat" x64
+    call "C:\Program Files\Microsoft Visual Studio\%VS_YEAR%\%VC_PRODUCT%\VC\Auxiliary\Build\vcvarsall.bat" x64
 ) else (
-    call "C:\Program Files (x86)\Microsoft Visual Studio\%VC_YEAR%\%VC_PRODUCT%\VC\Auxiliary\Build\vcvarsall.bat" x64 -vcvars_ver=%VC_VERSION%
+    call "C:\Program Files\Microsoft Visual Studio\%VS_YEAR%\%VC_PRODUCT%\VC\Auxiliary\Build\vcvarsall.bat" x64 -vcvars_ver=%VC_VERSION%
 )
 if errorlevel 1 exit /b
 if not errorlevel 0 exit /b

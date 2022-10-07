@@ -977,7 +977,7 @@ class TestBenchmarkUtils(TestCase):
         self.assertEqual(columnwise_colored_actual, columnwise_colored_expected)
         self.assertEqual(rowwise_colored_actual, rowwise_colored_expected)
 
-    @unittest.skipIf(IS_WINDOWS and os.getenv("VC_YEAR") == "2019", "Random seed only accepts int32")
+    @unittest.skipIf(IS_WINDOWS and os.getenv("VS_YEAR") == "2019", "Random seed only accepts int32")
     def test_fuzzer(self):
         fuzzer = benchmark_utils.Fuzzer(
             parameters=[
