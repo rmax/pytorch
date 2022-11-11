@@ -101,6 +101,29 @@ function get_pinned_commit() {
   cat .github/ci_commit_pins/"${1}".txt
 }
 
+function install_torchaudio() {
+  local commit
+  commit=$(get_pinned_commit audio)
+  pip_install --no-use-pep517 --user "git+https://github.com/pytorch/audio.git@${commit}"
+}
+
+# TODO: figure out why pip install torchaudio does not work
+function checkout_install_torchaudio() {
+  local commit
+  commit=$(get_pinned_commit audio)
+  git clone https://github.com/pytorch/audio
+  pushd audio
+  git checkout "${commit}"
+  time python setup.py install
+  popd
+}
+
+function install_torchtext() {
+  local commit
+  commit=$(get_pinned_commit text)
+  pip_install --no-use-pep517 --user "git+https://github.com/pytorch/text.git@${commit}"
+}
+
 function install_torchvision() {
   local commit
   commit=$(get_pinned_commit vision)
@@ -115,6 +138,16 @@ function checkout_install_torchvision() {
   git checkout "${commit}"
   time python setup.py install
   popd
+}
+
+function install_torchaudio_nightly() {
+  NIGHTLY_VERSION="dev20221101"
+  pip_install --user --pre torchaudio==0.14.0.${NIGHTLY_VERSION} --extra-index-url https://download.pytorch.org/whl/nightly/cu117
+}
+
+function install_torchtext_nightly() {
+  NIGHTLY_VERSION="dev20221101"
+  pip_install --user --pre torchtext==0.14.0.${NIGHTLY_VERSION} --extra-index-url https://download.pytorch.org/whl/nightly/cu117
 }
 
 function clone_pytorch_xla() {
@@ -199,8 +232,7 @@ function checkout_install_torchbench() {
   git clone https://github.com/pytorch/benchmark torchbench
   pushd torchbench
   git checkout "${commit}"
-  python install.py
-  pip_install gym==0.25.2  # workaround issue in 0.26.0
+  python install.py --continue_on_fail
   popd
 }
 

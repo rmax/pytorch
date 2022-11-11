@@ -25,6 +25,7 @@ VALID_TEST_CONFIG_LABELS = {f"{PREFIX}{label}" for label in {
     "inductor",
     "inductor_distributed",
     "inductor_timm",
+    "inductor_torchbench",
     "jit_legacy",
     "multigpu",
     "nogpu_AVX512",
