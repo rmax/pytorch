@@ -29,7 +29,7 @@ TORCH_API c10::intrusive_ptr<Work> allreduce_coalesced(
 TORCH_API c10::intrusive_ptr<Work> allgather(
     const c10::intrusive_ptr<ProcessGroup>& process_group,
     const std::vector<std::vector<at::Tensor>>& output_tensors,
-    const std::vector<at::Tensor>& input_tensors,
+    at::TensorList input_tensors,
     const AllgatherOptions& opts = {});
 
 TORCH_API c10::intrusive_ptr<Work> _allgather_base(
