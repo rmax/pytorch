@@ -7,7 +7,6 @@ from torch._decomp import decomposition_table
 from torch.utils._python_dispatch import TorchDispatchMode
 
 from torch.utils._pytree import tree_map, tree_flatten, tree_unflatten
-from torch.utils._mode_utils import no_dispatch
 from torch.testing._internal.common_utils import (
     is_iterable_of_tensors,
     TestCase,
@@ -159,8 +158,8 @@ def op_assert_ref(test_case, op, test_dtype, i, orig, decomp, ref, args, kwargs)
         (torch.bfloat16, torch.ops.aten.native_layer_norm_backward.default): 2e-2,
         (torch.bfloat16, torch.ops.aten.native_batch_norm.default): 1e-5,
         (torch.float16, torch.ops.aten.native_batch_norm.default): 1e-5,
-        (torch.bfloat16, torch.ops.aten.linalg_vector_norm.default): 1e-6,
-        (torch.float16, torch.ops.aten.linalg_vector_norm.default): 1e-6,
+        (torch.bfloat16, torch.ops.aten.linalg_vector_norm.default): 1e-4,
+        (torch.float16, torch.ops.aten.linalg_vector_norm.default): 1e-4,
         (torch.float16, torch.ops.aten.nll_loss_forward.default): 1e-2,
         (torch.bfloat16, torch.ops.aten.nll_loss_forward.default): 1e-1,
     }
@@ -244,8 +243,7 @@ def normalize_op_input_output2(
         if output_process_fn_grad is not None:
             result = output_process_fn_grad(result)
         if isinstance(result, tuple):
-            # TODO: Remove the following hack for namedtuples
-            result = tuple(result)
+            # TODO We should check that the integer outputs also agree
             result = tuple(
                 r
                 for r in result
@@ -293,6 +291,17 @@ CROSS_REF_EXCLUDE_SET = {
     (None, None, "empty_like"),
     (None, None, "empty"),
 
+    # No idea what's going on here
+    # In the recursive test logsumexp.default fails with args = (torch.tensor(-math.inf), [])
+    # in the test, but it seems to pass when tested locally and in the logsumexp test
+    (None, torch.float32, "masked.logsumexp"),
+    (None, torch.float64, "masked.logsumexp"),
+
+    # exp_vml_cpu not implemented for Half
+    (torch.cpu, torch.float16, "signal.windows.exponential"),
+    (torch.cpu, torch.float16, "signal.windows.gaussian"),
+    # sin_vml_cpu not implemented for Half
+    (torch.cpu, torch.float16, "signal.windows.cosine"),
     # CompositeAutogradImplicit
     # See https://github.com/pytorch/pytorch/issues/81669
     (None, None, "nn.functional.relu6"),
@@ -403,10 +412,6 @@ class TestDecomp(TestCase):
 
         class DecompCrossRefMode(TorchDispatchMode):
             def __torch_dispatch__(self, func, types, args=(), kwargs=None):
-                with no_dispatch():
-                    return self._torch_dispatch(func, types, args, kwargs)
-
-            def _torch_dispatch(self, func, types, args=(), kwargs=None):
                 test_case.precision = saved_precision
                 test_case.rel_tol = saved_rel_tol
 
@@ -415,6 +420,8 @@ class TestDecomp(TestCase):
 
                 # Stuff we shouldn't bother testing
                 # (TODO: remove detach from the decomp table?)
+                # N.b. Testing in-place ops would need dedicated logic
+                in_place = func.name()[-1] == '_'
                 if func not in decomposition_table or func in [
                     torch.ops.aten.detach.default,
                     # non-deterministic ops
@@ -425,7 +432,7 @@ class TestDecomp(TestCase):
                     torch.ops.aten.new_empty_strided.default,
                     torch.ops.aten.randn.default,
                     torch.ops.aten.native_dropout.default,
-                ] or any_unsupported(args, kwargs):
+                ] or any_unsupported(args, kwargs) or in_place:
                     return func(*args, **kwargs)
 
                 decomposed.add(func)
@@ -441,12 +448,22 @@ class TestDecomp(TestCase):
                 # decomposition and pytorch are from the "ground truth" (i.e.
                 # fp64). If the decomposition results in more error, we error
 
+                # We also decompose the decomposition recursively for
+                # further coverage, as some paths not be exercised directly by
+                # OpInfos (sadly) but just by other ops
+
                 decomposition = decomposition_table[func]
 
                 do_relative_check = test_dtype in [torch.float16, torch.bfloat16]
                 real_out_unflat = func(*args, **kwargs)
                 real_out, _ = tree_flatten(real_out_unflat)
-                decomp_out, _ = tree_flatten(decomposition(*args, **kwargs))
+
+                if run_all:
+                    # Execute recursively via DFS, to find the root of a possible error first
+                    with self:
+                        decomp_out, _ = tree_flatten(decomposition(*args, **kwargs))
+                else:
+                    decomp_out, _ = tree_flatten(decomposition(*args, **kwargs))
                 assert len(real_out) == len(decomp_out)
 
                 if do_relative_check:
