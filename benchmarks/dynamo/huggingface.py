@@ -89,42 +89,42 @@ assert len(BATCH_SIZE_KNOWN_MODELS)
 
 
 SKIP = {
-    # Difficult to run and compare
-    "Reformer",
-    # Fails deepcopy
-    "BlenderbotForCausalLM",
-    "BlenderbotForConditionalGeneration",
-    "GPTJForCausalLM",
-    "GPTJForQuestionAnswering",
-    "GPTNeoForCausalLM",
-    "GPTNeoForSequenceClassification",
-    # Fails with even batch size = 1
-    "DebertaV2ForMaskedLM",
-    "DebertaV2ForQuestionAnswering",
+    # # Difficult to run and compare
+    # "Reformer",
+    # # Fails deepcopy
+    # "BlenderbotForCausalLM",
+    # "BlenderbotForConditionalGeneration",
+    # "GPTJForCausalLM",
+    # "GPTJForQuestionAnswering",
+    # "GPTNeoForCausalLM",
+    # "GPTNeoForSequenceClassification",
+    # # Fails with even batch size = 1
+    # "DebertaV2ForMaskedLM",
+    # "DebertaV2ForQuestionAnswering",
 }
 
 # TODO - Fails even after fake tensors
 BATCH_SIZE_DIVISORS = {
-    "AlbertForMaskedLM": 2,
-    "AlbertForQuestionAnswering": 2,
-    "AllenaiLongformerBase": 2,
-    "BartForConditionalGeneration": 2,
-    "BertForMaskedLM": 2,
-    "BlenderbotSmallForCausalLM": 2,
-    "BlenderbotSmallForConditionalGeneration": 2,
-    "ElectraForCausalLM": 2,
-    "ElectraForQuestionAnswering": 2,
-    "GPT2ForSequenceClassification": 2,
-    "LayoutLMForMaskedLM": 2,
-    "LayoutLMForSequenceClassification": 2,
-    "RobertaForCausalLM": 2,
-    "T5ForConditionalGeneration": 2,
-    # Large footprint
-    "BartForCausalLM": 4,
-    "DebertaForQuestionAnswering": 4,
-    "XLNetLMHeadModel": 4,
-    # Very large footprint
-    "DebertaForMaskedLM": 8,
+    # "AlbertForMaskedLM": 2,
+    # "AlbertForQuestionAnswering": 2,
+    # "AllenaiLongformerBase": 2,
+    # "BartForConditionalGeneration": 2,
+    # "BertForMaskedLM": 2,
+    # "BlenderbotSmallForCausalLM": 2,
+    # "BlenderbotSmallForConditionalGeneration": 2,
+    # "ElectraForCausalLM": 2,
+    # "ElectraForQuestionAnswering": 2,
+    # "GPT2ForSequenceClassification": 2,
+    # "LayoutLMForMaskedLM": 2,
+    # "LayoutLMForSequenceClassification": 2,
+    # "RobertaForCausalLM": 2,
+    # "T5ForConditionalGeneration": 2,
+    # # Large footprint
+    # "BartForCausalLM": 4,
+    # "DebertaForQuestionAnswering": 4,
+    # "XLNetLMHeadModel": 4,
+    # # Very large footprint
+    # "DebertaForMaskedLM": 8,
 }
 
 
@@ -139,18 +139,24 @@ def get_module_cls_by_model_name(model_cls_name):
 
 
 def get_sequence_length(model_cls, model_name):
-    if model_name.startswith(("Bert", "Roberta", "Blenderbot")):
+    if model_name.startswith(("Blenderbot",)):
         seq_length = 128
-    elif model_name.startswith(("GPT2", "Bart", "T5")):
+    elif model_name.startswith(("GPT2", "Bart", "T5", "PLBart", "MBart")):
         seq_length = 1024
     elif model_name in ("AllenaiLongformerBase", "BigBird"):
         seq_length = 1024
+    elif model_name.startswith("OPT"):
+        seq_length = 2048
     elif "Reformer" in model_name:
         seq_length = 4096
     elif model_name.startswith(
-        ("Albert", "Deberta", "Layout", "Electra", "XLNet")
+        ("Albert", "Deberta", "Layout", "Electra", "XLNet", "MegatronBert", "Bert", "Roberta")
     ) or model_name in ("DistillGPT2", "GoogleFnet", "YituTechConvBert", "CamemBert"):
         seq_length = 512
+    elif model_name in ("TrOCRForCausalLM"):
+        seq_length = 256
+    elif model_name.startswith("MobileBert"):
+        seq_length = 128
     else:
         log.warning(
             f"Sequence Length not defined for {model_name}. Choosing 128 arbitrarily"
@@ -522,8 +528,8 @@ def refresh_model_names_and_batch_sizes():
 
 if __name__ == "__main__":
     # Code to refresh model names and batch sizes
-    # if "--find-batch-sizes" not in sys.argv:
-    #     refresh_model_names_and_batch_sizes()
+    if "--find-batch-sizes" not in sys.argv:
+        refresh_model_names_and_batch_sizes()
     logging.basicConfig(level=logging.WARNING)
     warnings.filterwarnings("ignore")
     main(HuggingfaceRunner())
